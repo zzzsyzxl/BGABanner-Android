@@ -10,6 +10,8 @@ import android.os.Build;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.LayoutRes;
 import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
+import android.support.constraint.ConstraintSet;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.ViewPager;
@@ -33,10 +35,7 @@ import java.util.List;
 import cn.bingoogolapple.bgabanner.transformer.BGAPageTransformer;
 import cn.bingoogolapple.bgabanner.transformer.TransitionEffect;
 
-public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDelegate, ViewPager.OnPageChangeListener {
-    private static final int RMP = RelativeLayout.LayoutParams.MATCH_PARENT;
-    private static final int RWC = RelativeLayout.LayoutParams.WRAP_CONTENT;
-    private static final int LWC = LinearLayout.LayoutParams.WRAP_CONTENT;
+public class BGABanner extends ConstraintLayout implements BGAViewPager.AutoPlayDelegate, ViewPager.OnPageChangeListener {
     private static final int NO_PLACEHOLDER_DRAWABLE = -1;
     private static final int VEL_THRESHOLD = 400;
     private BGAViewPager mViewPager;
@@ -50,8 +49,9 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
     private int mPageChangeDuration = 800;
     private int mPointGravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
     private int mPointLeftRightMargin;
-    private int mPointTopBottomMargin;
-    private int mPointContainerLeftRightPadding;
+    private int mNumberIndicatorTopBottomMargin;
+    private int mIndicatorContainerLeftRightPadding;
+    private int mIndicatorContainerHeight;
     private int mTipTextSize;
     private int mTipTextColor = Color.WHITE;
     private int mPointDrawableResId = R.drawable.bga_banner_selector_point_solid;
@@ -81,6 +81,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
     private View mEnterView;
     private GuideDelegate mGuideDelegate;
     private boolean mIsFirstInvisible = true;
+    private ConstraintSet mBannerConstraintSet = new ConstraintSet();
 
     private static final ImageView.ScaleType[] sScaleTypeArray = {
             ImageView.ScaleType.MATRIX,
@@ -116,9 +117,10 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
     private void initDefaultAttrs(Context context) {
         mAutoPlayTask = new AutoPlayTask(this);
 
+        mIndicatorContainerHeight = BGABannerUtil.dp2px(context, 35);
+        mIndicatorContainerLeftRightPadding = BGABannerUtil.dp2px(context, 10);
         mPointLeftRightMargin = BGABannerUtil.dp2px(context, 3);
-        mPointTopBottomMargin = BGABannerUtil.dp2px(context, 6);
-        mPointContainerLeftRightPadding = BGABannerUtil.dp2px(context, 10);
+        mNumberIndicatorTopBottomMargin = BGABannerUtil.dp2px(context, 6);
         mTipTextSize = BGABannerUtil.sp2px(context, 10);
         mPointContainerBackgroundDrawable = new ColorDrawable(Color.parseColor("#44aaaaaa"));
         mTransitionEffect = TransitionEffect.Default;
@@ -145,9 +147,9 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         } else if (attr == R.styleable.BGABanner_banner_pointLeftRightMargin) {
             mPointLeftRightMargin = typedArray.getDimensionPixelSize(attr, mPointLeftRightMargin);
         } else if (attr == R.styleable.BGABanner_banner_pointContainerLeftRightPadding) {
-            mPointContainerLeftRightPadding = typedArray.getDimensionPixelSize(attr, mPointContainerLeftRightPadding);
+            mIndicatorContainerLeftRightPadding = typedArray.getDimensionPixelSize(attr, mIndicatorContainerLeftRightPadding);
         } else if (attr == R.styleable.BGABanner_banner_pointTopBottomMargin) {
-            mPointTopBottomMargin = typedArray.getDimensionPixelSize(attr, mPointTopBottomMargin);
+            mNumberIndicatorTopBottomMargin = typedArray.getDimensionPixelSize(attr, mNumberIndicatorTopBottomMargin);
         } else if (attr == R.styleable.BGABanner_banner_indicatorGravity) {
             mPointGravity = typedArray.getInt(attr, mPointGravity);
         } else if (attr == R.styleable.BGABanner_banner_pointAutoPlayAble) {
@@ -188,25 +190,31 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
     }
 
     private void initView(Context context) {
-        RelativeLayout pointContainerRl = new RelativeLayout(context);
+        RelativeLayout indicatorBackgroundView = new RelativeLayout(context);
+        indicatorBackgroundView.setId(R.id.banner_pointContainerId);
         if (Build.VERSION.SDK_INT >= 16) {
-            pointContainerRl.setBackground(mPointContainerBackgroundDrawable);
+            indicatorBackgroundView.setBackground(mPointContainerBackgroundDrawable);
         } else {
-            pointContainerRl.setBackgroundDrawable(mPointContainerBackgroundDrawable);
+            indicatorBackgroundView.setBackgroundDrawable(mPointContainerBackgroundDrawable);
         }
-        pointContainerRl.setPadding(mPointContainerLeftRightPadding, mPointTopBottomMargin, mPointContainerLeftRightPadding, mPointTopBottomMargin);
-        RelativeLayout.LayoutParams pointContainerLp = new RelativeLayout.LayoutParams(RMP, RWC);
+        mBannerConstraintSet.connect(R.id.banner_pointContainerId, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT);
+        mBannerConstraintSet.connect(R.id.banner_pointContainerId, ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT);
+        mBannerConstraintSet.constrainHeight(R.id.banner_pointContainerId, mIndicatorContainerHeight);
         // 处理圆点在顶部还是底部
         if ((mPointGravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP) {
-            pointContainerLp.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+            mBannerConstraintSet.connect(R.id.banner_pointContainerId, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP);
+            mBannerConstraintSet.connect(R.id.banner_indicatorId, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP);
         } else {
-            pointContainerLp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+            mBannerConstraintSet.connect(R.id.banner_pointContainerId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM);
+            mBannerConstraintSet.connect(R.id.banner_indicatorId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM);
         }
-        addView(pointContainerRl, pointContainerLp);
+        addView(indicatorBackgroundView);
 
 
-        RelativeLayout.LayoutParams indicatorLp = new RelativeLayout.LayoutParams(RWC, RWC);
-        indicatorLp.addRule(CENTER_VERTICAL);
+        mBannerConstraintSet.constrainWidth(R.id.banner_indicatorId, ConstraintSet.WRAP_CONTENT);
+
         if (mIsNumberIndicator) {
             mNumberIndicatorTv = new TextView(context);
             mNumberIndicatorTv.setId(R.id.banner_indicatorId);
@@ -223,48 +231,70 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
                     mNumberIndicatorTv.setBackgroundDrawable(mNumberIndicatorBackground);
                 }
             }
-            pointContainerRl.addView(mNumberIndicatorTv, indicatorLp);
+
+            mBannerConstraintSet.setMargin(R.id.banner_indicatorId, ConstraintSet.TOP, mNumberIndicatorTopBottomMargin);
+            mBannerConstraintSet.setMargin(R.id.banner_indicatorId, ConstraintSet.BOTTOM, mNumberIndicatorTopBottomMargin);
+            mBannerConstraintSet.constrainHeight(R.id.banner_indicatorId, mIndicatorContainerHeight - 2 * mNumberIndicatorTopBottomMargin);
+            addView(mNumberIndicatorTv);
         } else {
             mPointRealContainerLl = new LinearLayout(context);
             mPointRealContainerLl.setId(R.id.banner_indicatorId);
             mPointRealContainerLl.setOrientation(LinearLayout.HORIZONTAL);
             mPointRealContainerLl.setGravity(Gravity.CENTER_VERTICAL);
-            pointContainerRl.addView(mPointRealContainerLl, indicatorLp);
+            mBannerConstraintSet.constrainHeight(R.id.banner_indicatorId, mIndicatorContainerHeight);
+            addView(mPointRealContainerLl);
         }
 
-        RelativeLayout.LayoutParams tipLp = new RelativeLayout.LayoutParams(RMP, RWC);
-        tipLp.addRule(CENTER_VERTICAL);
+        mBannerConstraintSet.constrainHeight(R.id.banner_tipId, mIndicatorContainerHeight);
         mTipTv = new TextView(context);
+        mTipTv.setId(R.id.banner_tipId);
         mTipTv.setGravity(Gravity.CENTER_VERTICAL);
         mTipTv.setSingleLine(true);
         mTipTv.setEllipsize(TextUtils.TruncateAt.END);
         mTipTv.setTextColor(mTipTextColor);
         mTipTv.setTextSize(TypedValue.COMPLEX_UNIT_PX, mTipTextSize);
-        pointContainerRl.addView(mTipTv, tipLp);
+        addView(mTipTv);
 
         int horizontalGravity = mPointGravity & Gravity.HORIZONTAL_GRAVITY_MASK;
         // 处理圆点在左边、右边还是水平居中
         if (horizontalGravity == Gravity.LEFT) {
-            indicatorLp.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-            tipLp.addRule(RelativeLayout.RIGHT_OF, R.id.banner_indicatorId);
+            mBannerConstraintSet.connect(R.id.banner_indicatorId, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.LEFT, R.id.banner_indicatorId, ConstraintSet.RIGHT);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT);
+
+            mBannerConstraintSet.setMargin(R.id.banner_indicatorId, ConstraintSet.START, mIndicatorContainerLeftRightPadding);
+
             mTipTv.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
         } else if (horizontalGravity == Gravity.RIGHT) {
-            indicatorLp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-            tipLp.addRule(RelativeLayout.LEFT_OF, R.id.banner_indicatorId);
+            mBannerConstraintSet.connect(R.id.banner_indicatorId, ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.RIGHT, R.id.banner_indicatorId, ConstraintSet.LEFT);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT);
+
+            mBannerConstraintSet.setMargin(R.id.banner_indicatorId, ConstraintSet.END, mIndicatorContainerLeftRightPadding);
         } else {
-            indicatorLp.addRule(RelativeLayout.CENTER_HORIZONTAL);
-            tipLp.addRule(RelativeLayout.LEFT_OF, R.id.banner_indicatorId);
+            mBannerConstraintSet.centerHorizontally(R.id.banner_indicatorId, ConstraintSet.PARENT_ID);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.RIGHT, R.id.banner_indicatorId, ConstraintSet.LEFT);
+            mBannerConstraintSet.connect(R.id.banner_tipId, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT);
         }
 
+        mBannerConstraintSet.setMargin(R.id.banner_tipId, ConstraintSet.START, mIndicatorContainerLeftRightPadding);
+        mBannerConstraintSet.setMargin(R.id.banner_tipId, ConstraintSet.END, mIndicatorContainerLeftRightPadding);
+
         showPlaceholder();
+
+        mBannerConstraintSet.applyTo(this);
     }
 
     public void showPlaceholder() {
         if (mPlaceholderIv == null && mPlaceholderDrawableResId != NO_PLACEHOLDER_DRAWABLE) {
             mPlaceholderIv = BGABannerUtil.getItemImageView(getContext(), mPlaceholderDrawableResId, new BGALocalImageSize(720, 360, 640, 320), mScaleType);
-            RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(RMP, RMP);
-            layoutParams.setMargins(0, 0, 0, mContentBottomMargin);
-            addView(mPlaceholderIv, layoutParams);
+            mPlaceholderIv.setId(R.id.banner_placeholderId);
+            mBannerConstraintSet.connect(R.id.banner_placeholderId, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT);
+            mBannerConstraintSet.connect(R.id.banner_placeholderId, ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT);
+            mBannerConstraintSet.connect(R.id.banner_placeholderId, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP);
+            mBannerConstraintSet.connect(R.id.banner_placeholderId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM);
+            mBannerConstraintSet.setMargin(R.id.banner_placeholderId, ConstraintSet.BOTTOM, mContentBottomMargin);
+            addView(mPlaceholderIv);
         }
     }
 
@@ -504,7 +534,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
             mPointRealContainerLl.removeAllViews();
 
             if (mIsNeedShowIndicatorOnOnlyOnePage || (!mIsNeedShowIndicatorOnOnlyOnePage && mViews.size() > 1)) {
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LWC, LWC);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(mPointLeftRightMargin, 0, mPointLeftRightMargin, 0);
                 ImageView imageView;
                 for (int i = 0; i < mViews.size(); i++) {
@@ -539,9 +569,14 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         mViewPager.setPageTransformer(true, BGAPageTransformer.getPageTransformer(mTransitionEffect));
         setPageChangeDuration(mPageChangeDuration);
 
-        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(RMP, RMP);
-        layoutParams.setMargins(0, 0, 0, mContentBottomMargin);
-        addView(mViewPager, 0, layoutParams);
+        mViewPager.setId(R.id.banner_viewPagerId);
+        mBannerConstraintSet.connect(R.id.banner_viewPagerId, ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT);
+        mBannerConstraintSet.connect(R.id.banner_viewPagerId, ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT);
+        mBannerConstraintSet.connect(R.id.banner_viewPagerId, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP);
+        mBannerConstraintSet.connect(R.id.banner_viewPagerId, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM);
+        mBannerConstraintSet.setMargin(R.id.banner_viewPagerId, ConstraintSet.END, mContentBottomMargin);
+
+        addView(mViewPager, 0);
 
         if (mAutoPlayAble) {
             mViewPager.setAutoPlayDelegate(this);

@@ -1,17 +1,17 @@
 package cn.bingoogolapple.bgabanner;
 
 import android.content.Context;
+import android.support.constraint.ConstraintLayout;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.FrameLayout;
 
 /**
  * 作者:王浩 邮件:bingoogolapple@gmail.com
  * 创建时间:16/8/7 上午11:39
  * 描述:引导界面联动布局，将每一个触摸事件分发给所有的子控件。
  */
-public class BGAGuideLinkageLayout extends FrameLayout {
+public class BGAGuideLinkageLayout extends ConstraintLayout {
     public BGAGuideLinkageLayout(Context context) {
         super(context);
     }
@@ -29,7 +29,11 @@ public class BGAGuideLinkageLayout extends FrameLayout {
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             try {
-                child.dispatchTouchEvent(ev);
+                if (child instanceof BGABanner) {
+                    child.dispatchTouchEvent(ev);
+                } else {
+                    return super.dispatchTouchEvent(ev);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

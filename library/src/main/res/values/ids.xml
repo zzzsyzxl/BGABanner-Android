@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <item name="banner_pointContainerId" type="id" />
     <item name="banner_indicatorId" type="id" />
+    <item name="banner_tipId" type="id" />
+    <item name="banner_placeholderId" type="id" />
+    <item name="banner_viewPagerId" type="id" />
 </resources>
