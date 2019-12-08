@@ -7,12 +7,6 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.support.annotation.DrawableRes;
-import android.support.annotation.LayoutRes;
-import android.support.annotation.Nullable;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.view.ViewPager;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -30,6 +24,13 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.annotation.DimenRes;
+import androidx.annotation.DrawableRes;
+import androidx.annotation.LayoutRes;
+import androidx.annotation.Nullable;
+import androidx.core.view.ViewCompat;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 import cn.bingoogolapple.bgabanner.transformer.BGAPageTransformer;
 import cn.bingoogolapple.bgabanner.transformer.TransitionEffect;
 
@@ -68,6 +69,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
     private Adapter mAdapter;
     private int mOverScrollMode = OVER_SCROLL_NEVER;
     private ViewPager.OnPageChangeListener mOnPageChangeListener;
+    private RelativeLayout mPointContainerRl;
     private boolean mIsNumberIndicator = false;
     private TextView mNumberIndicatorTv;
     private int mNumberIndicatorTextColor = Color.WHITE;
@@ -188,13 +190,13 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
     }
 
     private void initView(Context context) {
-        RelativeLayout pointContainerRl = new RelativeLayout(context);
+        mPointContainerRl = new RelativeLayout(context);
         if (Build.VERSION.SDK_INT >= 16) {
-            pointContainerRl.setBackground(mPointContainerBackgroundDrawable);
+            mPointContainerRl.setBackground(mPointContainerBackgroundDrawable);
         } else {
-            pointContainerRl.setBackgroundDrawable(mPointContainerBackgroundDrawable);
+            mPointContainerRl.setBackgroundDrawable(mPointContainerBackgroundDrawable);
         }
-        pointContainerRl.setPadding(mPointContainerLeftRightPadding, mPointTopBottomMargin, mPointContainerLeftRightPadding, mPointTopBottomMargin);
+        mPointContainerRl.setPadding(mPointContainerLeftRightPadding, mPointTopBottomMargin, mPointContainerLeftRightPadding, mPointTopBottomMargin);
         RelativeLayout.LayoutParams pointContainerLp = new RelativeLayout.LayoutParams(RMP, RWC);
         // 处理圆点在顶部还是底部
         if ((mPointGravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP) {
@@ -202,7 +204,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         } else {
             pointContainerLp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         }
-        addView(pointContainerRl, pointContainerLp);
+        addView(mPointContainerRl, pointContainerLp);
 
 
         RelativeLayout.LayoutParams indicatorLp = new RelativeLayout.LayoutParams(RWC, RWC);
@@ -223,13 +225,13 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
                     mNumberIndicatorTv.setBackgroundDrawable(mNumberIndicatorBackground);
                 }
             }
-            pointContainerRl.addView(mNumberIndicatorTv, indicatorLp);
+            mPointContainerRl.addView(mNumberIndicatorTv, indicatorLp);
         } else {
             mPointRealContainerLl = new LinearLayout(context);
             mPointRealContainerLl.setId(R.id.banner_indicatorId);
             mPointRealContainerLl.setOrientation(LinearLayout.HORIZONTAL);
             mPointRealContainerLl.setGravity(Gravity.CENTER_VERTICAL);
-            pointContainerRl.addView(mPointRealContainerLl, indicatorLp);
+            mPointContainerRl.addView(mPointRealContainerLl, indicatorLp);
         }
 
         RelativeLayout.LayoutParams tipLp = new RelativeLayout.LayoutParams(RMP, RWC);
@@ -240,7 +242,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         mTipTv.setEllipsize(TextUtils.TruncateAt.END);
         mTipTv.setTextColor(mTipTextColor);
         mTipTv.setTextSize(TypedValue.COMPLEX_UNIT_PX, mTipTextSize);
-        pointContainerRl.addView(mTipTv, tipLp);
+        mPointContainerRl.addView(mTipTv, tipLp);
 
         int horizontalGravity = mPointGravity & Gravity.HORIZONTAL_GRAVITY_MASK;
         // 处理圆点在左边、右边还是水平居中
@@ -328,6 +330,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         initIndicator();
         initViewPager();
         removePlaceholder();
+        handleGuideViewVisibility(0, 0);
     }
 
     /**
@@ -344,16 +347,24 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
             tips = new ArrayList<>();
         }
         for (int i = 0; i < models.size(); i++) {
-            mViews.add(View.inflate(getContext(), layoutResId, null));
+            mViews.add(inflateItemView(layoutResId));
         }
         if (mAutoPlayAble && mViews.size() < 3) {
             mHackyViews = new ArrayList<>(mViews);
-            mHackyViews.add(View.inflate(getContext(), layoutResId, null));
+            mHackyViews.add(inflateItemView(layoutResId));
             if (mHackyViews.size() == 2) {
-                mHackyViews.add(View.inflate(getContext(), layoutResId, null));
+                mHackyViews.add(inflateItemView(layoutResId));
             }
         }
         setData(mViews, models, tips);
+    }
+
+    private View inflateItemView(@LayoutRes int layoutResId) {
+        View itemView = View.inflate(getContext(), layoutResId, null);
+        if (itemView instanceof ImageView) {
+            ((ImageView) itemView).setScaleType(mScaleType);
+        }
+        return itemView;
     }
 
     /**
@@ -452,6 +463,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
                 mSkipView.setOnClickListener(mGuideOnNoDoubleClickListener);
             }
         }
+        handleGuideViewVisibility(0, 0);
     }
 
     /**
@@ -499,6 +511,23 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         }
     }
 
+    public void setIndicatorVisibility(boolean visible) {
+        mPointContainerRl.setVisibility(visible ? VISIBLE : GONE);
+    }
+
+    public void setIndicatorTopBottomMarginDp(int marginDp) {
+        setIndicatorTopBottomMarginPx(BGABannerUtil.dp2px(getContext(), marginDp));
+    }
+
+    public void setIndicatorTopBottomMarginRes(@DimenRes int resId) {
+        setIndicatorTopBottomMarginPx(getResources().getDimensionPixelOffset(resId));
+    }
+
+    public void setIndicatorTopBottomMarginPx(int marginPx) {
+        mPointTopBottomMargin = marginPx;
+        mPointContainerRl.setPadding(mPointContainerLeftRightPadding, mPointTopBottomMargin, mPointContainerLeftRightPadding, mPointTopBottomMargin);
+    }
+
     private void initIndicator() {
         if (mPointRealContainerLl != null) {
             mPointRealContainerLl.removeAllViews();
@@ -543,7 +572,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         layoutParams.setMargins(0, 0, 0, mContentBottomMargin);
         addView(mViewPager, 0, layoutParams);
 
-        if (mAutoPlayAble) {
+        if (mAutoPlayAble && !BGABannerUtil.isCollectionEmpty(mViews)) {
             mViewPager.setAutoPlayDelegate(this);
 
             int zeroItem = Integer.MAX_VALUE / 2 - (Integer.MAX_VALUE / 2) % mViews.size();
@@ -692,7 +721,7 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
                     !mIsNeedShowIndicatorOnOnlyOnePage && mViews.size() > 1)))) {
                 mPointRealContainerLl.setVisibility(View.VISIBLE);
                 for (int i = 0; i < mPointRealContainerLl.getChildCount(); i++) {
-                    mPointRealContainerLl.getChildAt(i).setEnabled(i == newCurrentPoint);
+                    mPointRealContainerLl.getChildAt(i).setSelected(i == newCurrentPoint);
                     // 处理指示器选中和未选中状态图片尺寸不相等
                     mPointRealContainerLl.getChildAt(i).requestLayout();
                 }
@@ -748,26 +777,34 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
     @Override
     public void handleAutoPlayActionUpOrCancel(float xVelocity) {
         if (mViewPager != null) {
-            if (mPageScrollPosition < mViewPager.getCurrentItem()) {
-                // 往右滑
+            if (mPageScrollPosition < mViewPager.getCurrentItem()) { // 往右滑
                 if (xVelocity > VEL_THRESHOLD || (mPageScrollPositionOffset < 0.7f && xVelocity > -VEL_THRESHOLD)) {
+                    // 已达到右滑到接下来展示左边一页的条件，展示左边一页
                     mViewPager.setBannerCurrentItemInternal(mPageScrollPosition, true);
                 } else {
+                    // 未达到右滑到接下来展示左边一页的条件，展示当前页
                     mViewPager.setBannerCurrentItemInternal(mPageScrollPosition + 1, true);
+                }
+            } else if (mPageScrollPosition == mViewPager.getCurrentItem()) { // 往左滑
+                if (xVelocity < -VEL_THRESHOLD || (mPageScrollPositionOffset > 0.3f && xVelocity < VEL_THRESHOLD)) {
+                    // 已达到左滑到接下来展示右边一页的条件，展示右边一页
+                    mViewPager.setBannerCurrentItemInternal(mPageScrollPosition + 1, true);
+                } else {
+                    // 未达到左滑到接下来展示右边一页的条件，展示当前页
+                    mViewPager.setBannerCurrentItemInternal(mPageScrollPosition, true);
                 }
             } else {
-                // 往左滑
-                if (xVelocity < -VEL_THRESHOLD || (mPageScrollPositionOffset > 0.3f && xVelocity < VEL_THRESHOLD)) {
-                    mViewPager.setBannerCurrentItemInternal(mPageScrollPosition + 1, true);
-                } else {
-                    mViewPager.setBannerCurrentItemInternal(mPageScrollPosition, true);
-                }
+                // 快速左滑优化异常场景。感谢 https://blog.csdn.net/lylddingHFFW/article/details/89212664
+                mViewPager.setBannerCurrentItemInternal(mPageScrollPosition, true);
             }
         }
     }
 
     @Override
     public void onPageSelected(int position) {
+        if (BGABannerUtil.isCollectionEmpty(mViews)) {
+            return;
+        }
         position = position % mViews.size();
         switchToPoint(position);
 
@@ -778,7 +815,10 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
 
     @Override
     public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-        handleGuideViewVisibility(position, positionOffset);
+        if (BGABannerUtil.isCollectionEmpty(mViews)) {
+            return;
+        }
+        handleGuideViewVisibility(position % mViews.size(), positionOffset);
 
         mPageScrollPosition = position;
         mPageScrollPositionOffset = positionOffset;
@@ -819,6 +859,19 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         if (mEnterView == null && mSkipView == null) {
             return;
         }
+        if (getItemCount() < 2) { // 只有一页时，有进入按钮则显示进入按钮并隐藏跳过按钮，没有进入按钮则显示跳过按钮
+            if (mEnterView != null) {
+                mEnterView.setVisibility(VISIBLE);
+                if (mSkipView != null) {
+                    mSkipView.setVisibility(GONE);
+                }
+                return;
+            }
+            if (mSkipView != null) {
+                mSkipView.setVisibility(VISIBLE);
+                return;
+            }
+        }
 
         if (position == getItemCount() - 2) {
             if (mEnterView != null) {
@@ -844,12 +897,27 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
                 }
             }
         } else if (position == getItemCount() - 1) {
-            if (mSkipView != null) {
-                mSkipView.setVisibility(View.GONE);
-            }
             if (mEnterView != null) {
-                mEnterView.setVisibility(View.VISIBLE);
-                ViewCompat.setAlpha(mEnterView, 1.0f);
+                ViewCompat.setAlpha(mEnterView, 1.0f - positionOffset);
+            }
+            if (mSkipView != null) {
+                ViewCompat.setAlpha(mSkipView,  positionOffset);
+            }
+
+            if (positionOffset < 0.5f) {
+                if (mEnterView != null) {
+                    mEnterView.setVisibility(View.VISIBLE);
+                }
+                if (mSkipView != null) {
+                    mSkipView.setVisibility(View.GONE);
+                }
+            } else {
+                if (mEnterView != null) {
+                    mEnterView.setVisibility(View.GONE);
+                }
+                if (mSkipView != null) {
+                    mSkipView.setVisibility(View.VISIBLE);
+                }
             }
         } else {
             if (mSkipView != null) {
@@ -950,8 +1018,8 @@ public class BGABanner extends RelativeLayout implements BGAViewPager.AutoPlayDe
         public void run() {
             BGABanner banner = mBanner.get();
             if (banner != null) {
-                banner.switchToNextPage();
                 banner.startAutoPlay();
+                banner.switchToNextPage();
             }
         }
     }

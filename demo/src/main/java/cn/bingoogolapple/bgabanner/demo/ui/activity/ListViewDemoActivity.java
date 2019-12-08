@@ -2,7 +2,6 @@ package cn.bingoogolapple.bgabanner.demo.ui.activity;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -13,6 +12,7 @@ import com.bumptech.glide.request.RequestOptions;
 
 import java.util.List;
 
+import androidx.appcompat.app.AppCompatActivity;
 import cn.bingoogolapple.baseadapter.BGAAdapterViewAdapter;
 import cn.bingoogolapple.baseadapter.BGAViewHolderHelper;
 import cn.bingoogolapple.bgabanner.BGABanner;
@@ -104,7 +104,7 @@ public class ListViewDemoActivity extends AppCompatActivity implements BGABanner
      * 加载内容列表数据
      */
     private void loadContentData() {
-        mEngine.loadContentData("http://7xk9dj.com1.z0.glb.clouddn.com/refreshlayout/api/defaultdata.json").enqueue(new Callback<List<RefreshModel>>() {
+        mEngine.loadContentData("http://bgashare.bingoogolapple.cn/refreshlayout/api/defaultdata.json").enqueue(new Callback<List<RefreshModel>>() {
             @Override
             public void onResponse(Call<List<RefreshModel>> call, Response<List<RefreshModel>> response) {
                 mContentAdapter.setData(response.body());

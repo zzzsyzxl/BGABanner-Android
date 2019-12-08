@@ -2,9 +2,6 @@ package cn.bingoogolapple.bgabanner.demo.ui.activity;
 
 import android.graphics.Rect;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -15,6 +12,9 @@ import com.bumptech.glide.request.RequestOptions;
 
 import java.util.List;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import cn.bingoogolapple.baseadapter.BGAOnRVItemClickListener;
 import cn.bingoogolapple.baseadapter.BGARecyclerViewAdapter;
 import cn.bingoogolapple.baseadapter.BGAViewHolderHelper;
@@ -149,7 +149,7 @@ public class RecyclerViewDemoActivity extends AppCompatActivity implements BGABa
      * 加载内容列表数据
      */
     private void loadContentData() {
-        mEngine.loadContentData("http://7xk9dj.com1.z0.glb.clouddn.com/refreshlayout/api/defaultdata.json").enqueue(new Callback<List<RefreshModel>>() {
+        mEngine.loadContentData("http://bgashare.bingoogolapple.cn/refreshlayout/api/defaultdata.json").enqueue(new Callback<List<RefreshModel>>() {
             @Override
             public void onResponse(Call<List<RefreshModel>> call, Response<List<RefreshModel>> response) {
                 mContentAdapter.setData(response.body());
